@@ -59,7 +59,7 @@ def duckduckgo_search(query, result_dict, index, domain):
 
     # Use lock to safely update the result
     with results_lock:
-        result_dict[index] = filter_and_search_content(links, query, domain)
+        result_dict[index] = (links, filter_and_search_content(links, query, domain))
 
 def extract_links(driver):
     links = []
@@ -153,16 +153,25 @@ if uploaded_file and st.button("Start Search"):
 
         for index, row in df.iterrows():
             se_man_name = row['SE_MAN_NAME']
-            results = result_dict.get(index, [])
-            if results:
-                for link in results:
-                    domain_prefix = extract_domain_prefix(se_man_name).lower()
-                    if domain_prefix in link:
-                        df.at[index, 'Online Link'] = link
-                        break
-                st.write(f"Results for {mpn}: {results}")
+            links, results = result_dict.get(index, ([], []))
+            if links:
+                st.write(f"Links found for {mpn}:")
+                for link in links:
+                    st.write(link)
             else:
-                st.write(f"No results found for {mpn}.")
+                st.write(f"No links found for {mpn}.")
+
+            if results:
+                for result in results:
+                    if isinstance(result, str):
+                        st.write(f"Result for {mpn}: {result}")
+
+            # Update the Online Link column
+            for link in links:
+                domain_prefix = extract_domain_prefix(se_man_name).lower()
+                if domain_prefix in link:
+                    df.at[index, 'Online Link'] = link
+                    break
 
         output_file = r'C:\Users\136861\Downloads\output_file.xlsx'
         df.to_excel(output_file, index=False)
