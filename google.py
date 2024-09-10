@@ -82,6 +82,9 @@ def filter_and_search_content(links, mpn, domain):
     # Filter links for the specified domain
     filtered_links = [link for link in links if domain in link]
 
+    if not filtered_links:
+        return ["No links found for this domain."]
+
     for link in filtered_links:
         try:
             response = requests.get(link)
@@ -113,7 +116,7 @@ def filter_and_search_content(links, mpn, domain):
         except Exception as e:
             continue
     
-    return [best_match] if best_match else []
+    return [best_match] if best_match else ["No suitable match found."]
 
 def extract_domain_prefix(manufacturer_name):
     return manufacturer_name.lower() + ".com"  # Adjust as needed
@@ -151,11 +154,15 @@ if uploaded_file and st.button("Start Search"):
         for index, row in df.iterrows():
             se_man_name = row['SE_MAN_NAME']
             results = result_dict.get(index, [])
-            for link in results:
-                domain_prefix = extract_domain_prefix(se_man_name).lower()
-                if domain_prefix in link:
-                    df.at[index, 'Online Link'] = link
-                    break
+            if results:
+                for link in results:
+                    domain_prefix = extract_domain_prefix(se_man_name).lower()
+                    if domain_prefix in link:
+                        df.at[index, 'Online Link'] = link
+                        break
+                st.write(f"Results for {mpn}: {results}")
+            else:
+                st.write(f"No results found for {mpn}.")
 
         output_file = r'C:\Users\136861\Downloads\output_file.xlsx'
         df.to_excel(output_file, index=False)
