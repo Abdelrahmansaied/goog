@@ -159,19 +159,8 @@ if uploaded_file and st.button("Start Search"):
                     if domain_prefix in link:
                         df.at[index, 'Online Link'] = link
                         break
-            output_buffer = io.BytesIO()  # Use BytesIO for in-memory file storage
-            df.to_excel(output_buffer, index=False)
-            output_buffer.seek(0)  # Move cursor to the start of the buffer
-            st.dataframe(df)
-            st.download_button(
-                label="Download Results",
-                data=output_buffer,
-                file_name="Goo",
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-
-            st.success("Process completed! Results saved to `output_file.xlsx`.")
-            st.dataframe(df)
+            df.to_excel("x.xlsx", index=False)
+            st.success("Process completed! Results saved to `x.xlsx`.")
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
