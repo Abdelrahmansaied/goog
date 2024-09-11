@@ -66,11 +66,17 @@ def duckduckgo_search(query, result_dict, index, domain):
 
 def extract_links(driver):
     links = []
-    elements = driver.find_elements(By.XPATH, '//*[@id="rso"]//a/h3')  # Updated XPath for link extraction
-    for element in elements:
-        link = element.get_attribute('href')
-        if link:
-            links.append(link)
+    for i in range(1, 11):  # Adjust range based on the number of divs you want to check
+        try:
+            xpath = f'//*[@id="rso"]/div[{i}]/div/div/div[1]/div/div/span/a/h3'
+            elements = driver.find_elements(By.XPATH, xpath)
+            for element in elements:
+                link = element.get_attribute('href')
+                if link:
+                    links.append(link)
+        except Exception as e:
+            print(f"Error extracting links from div[{i}]: {e}")
+            continue
     return links
 
 def filter_and_search_content(links, mpn, domain):
