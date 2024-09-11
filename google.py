@@ -30,7 +30,7 @@ results_lock = threading.Lock()  # Thread lock to manage concurrent writes
 
 def duckduckgo_search(query, result_dict, index, domain):
     driver = webdriver.Chrome(service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()), options=chrome_options)
-    url = f'https://duckduckgo.com/?q={query}'
+    url = f'google.com/search?q={query}'
     driver.get(url)
     time.sleep(random.uniform(2, 4))  # Wait for the page to load
 
@@ -43,7 +43,7 @@ def duckduckgo_search(query, result_dict, index, domain):
         # Click the 'More Results' button until we have 30 links
         while len(links) < 30:
             try:
-                more_results_button = driver.find_element(By.XPATH, '//*[@id="more-results"]')
+                more_results_button = driver.find_element(By.XPATH, '//*[@id="pnnext"]/span[2]')
                 more_results_button.click()
                 time.sleep(random.uniform(2, 4))  # Wait for new results to load
                 links += extract_links(driver)
@@ -68,7 +68,7 @@ def extract_links(driver):
     for i in range(0, 30):  # Check for up to 30 elements
         element_id = f"r1-{i}"
         try:
-            elements = driver.find_elements(By.XPATH, f'//*[@id="{element_id}"]/div[2]/h2/a')
+            elements = driver.find_elements(By.XPATH, f'//*[@id="rso"]/div[{element_id}]/div/div/div/div[1]/div/div/span/a/h3')
             for element in elements:
                 link = element.get_attribute('href')
                 if link:
