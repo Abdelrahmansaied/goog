@@ -28,8 +28,7 @@ chrome_options.add_argument(f"user-agent={user_agent}")
 results_lock = threading.Lock()  # Thread lock to manage concurrent writes
 
 def duckduckgo_search(query, result_dict, index, domain):
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()), options=chrome_options)
     url = f'https://duckduckgo.com/?q={query}'
     driver.get(url)
     time.sleep(random.uniform(2, 4))  # Wait for the page to load
