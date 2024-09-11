@@ -51,7 +51,7 @@ def duckduckgo_search(query, result_dict, index, domain):
                 # Remove duplicates
                 links = list(set(links))
 
-            except Exception as e:
+            except Exception:
                 break
 
     except Exception as e:
@@ -73,7 +73,7 @@ def extract_links(driver):
                 link = element.get_attribute('href')
                 if link:
                     links.append(link)
-        except Exception as e:
+        except Exception:
             continue
     return links
 
@@ -112,7 +112,7 @@ def filter_and_search_content(links, mpn, domain):
                 if close_matches:
                     best_match = close_matches[0]
 
-        except Exception as e:
+        except Exception:
             continue
     
     return [best_match] if best_match else []
@@ -159,8 +159,15 @@ if uploaded_file and st.button("Start Search"):
                     if domain_prefix in link:
                         df.at[index, 'Online Link'] = link
                         break
-            df.to_excel("x.xlsx", index=False)
-            st.success("Process completed! Results saved to `x.xlsx`.")
+            
+            # Save results to a new Excel file
+            output_file = "results.xlsx"
+            df.to_excel(output_file, index=False)
+            st.success("Process completed! Results saved.")
+
+            # Provide a download link for the results
+            with open(output_file, "rb") as f:
+                st.download_button("Download Results", f, file_name=output_file)
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
