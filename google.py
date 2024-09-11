@@ -3,7 +3,6 @@ import re
 import time
 import random
 import threading
-from webdriver_manager.core.os_manager import ChromeType
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -15,6 +14,7 @@ from bs4 import BeautifulSoup
 from PyPDF2 import PdfReader
 import io
 import streamlit as st
+from datetime import datetime
 
 # Setup Chrome options
 chrome_options = Options()
@@ -29,7 +29,7 @@ chrome_options.add_argument(f"user-agent={user_agent}")
 results_lock = threading.Lock()  # Thread lock to manage concurrent writes
 
 def duckduckgo_search(query, result_dict, index, domain):
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()), options=chrome_options)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     url = f'https://duckduckgo.com/?q={query}'
     driver.get(url)
     time.sleep(random.uniform(2, 4))  # Wait for the page to load
@@ -73,7 +73,7 @@ def extract_links(driver):
                 link = element.get_attribute('href')
                 if link:
                     links.append(link)
-        except Exception as e:
+        except Exception:
             continue
     return links
 
@@ -98,13 +98,11 @@ def filter_and_search_content(links, mpn, domain):
             elif 'application/pdf' in content_type:
                 with io.BytesIO(response.content) as f:
                     reader = PdfReader(f)
-                    pdf_text = ''
-                    for page in reader.pages:
-                        pdf_text += page.extract_text() or ''
+                    pdf_text = ''.join(page.extract_text() or '' for page in reader.pages)
                     if mpn_pattern.search(pdf_text):
                         return [link]  # Return if exact match is found
 
-            # If no exact match, track the best match
+            # Track the best match if no exact match was found
             if best_match is None:
                 best_match = link
             else:
@@ -112,7 +110,7 @@ def filter_and_search_content(links, mpn, domain):
                 if close_matches:
                     best_match = close_matches[0]
 
-        except Exception as e:
+        except Exception:
             continue
     
     return [best_match] if best_match else []
@@ -160,11 +158,23 @@ if uploaded_file and st.button("Start Search"):
                         df.at[index, 'Online Link'] = link
                         break
 
-            output_file = 'output_file.xlsx'
-            df.to_excel(output_file, index=False)
+            # Generate a timestamp for the output file name
+            current_date = datetime.now().strftime("%Y%m%d")
+            output_file_name = f"output_file_{current_date}.xlsx"
+            output_buffer = io.BytesIO()  # Use BytesIO for in-memory file storage
+            df.to_excel(output_buffer, index=False)
+            output_buffer.seek(0)  # Move cursor to the start of the buffer
 
-            st.success("Process completed! Results saved to `output_file.xlsx`.")
-            st.dataframe(df)
+            st.success("Process completed! Results are ready for download.")
+            st.dataframe(df)  # Show results in the app
+
+            # Provide a download button
+            st.download_button(
+                label="Download Results",
+                data=output_buffer,
+                file_name=output_file_name,
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
