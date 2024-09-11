@@ -3,6 +3,7 @@ import re
 import time
 import random
 import threading
+from webdriver_manager.core.os_manager import ChromeType
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
