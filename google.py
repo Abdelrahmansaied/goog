@@ -162,6 +162,7 @@ if uploaded_file and st.button("Start Search"):
             output_buffer = io.BytesIO()  # Use BytesIO for in-memory file storage
             df.to_excel(output_buffer, index=False)
             output_buffer.seek(0)  # Move cursor to the start of the buffer
+            st.dataframe(df)
             st.download_button(
                 label="Download Results",
                 data=output_buffer,
