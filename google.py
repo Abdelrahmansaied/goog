@@ -159,7 +159,9 @@ if uploaded_file and st.button("Start Search"):
                     if domain_prefix in link:
                         df.at[index, 'Online Link'] = link
                         break
-
+            output_buffer = io.BytesIO()  # Use BytesIO for in-memory file storage
+            df.to_excel(output_buffer, index=False)
+            output_buffer.seek(0)  # Move cursor to the start of the buffer
             st.download_button(
                 label="Download Results",
                 data=output_buffer,
