@@ -30,7 +30,7 @@ results_lock = threading.Lock()  # Thread lock to manage concurrent writes
 
 def duckduckgo_search(query, result_dict, index, domain):
     driver = webdriver.Chrome(service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()), options=chrome_options)
-    url = f'google.com/search?q={query}'
+    url = f'https://www.google.com/search?q={query}'  # Corrected URL
     driver.get(url)
     time.sleep(random.uniform(2, 4))  # Wait for the page to load
 
@@ -40,10 +40,10 @@ def duckduckgo_search(query, result_dict, index, domain):
         # Extract initial links
         links += extract_links(driver)
 
-        # Click the 'More Results' button until we have 30 links
+        # Click the 'Next' button until we have 30 links
         while len(links) < 30:
             try:
-                more_results_button = driver.find_element(By.XPATH, '//*[@id="pnnext"]/span[2]')
+                more_results_button = driver.find_element(By.XPATH, '//*[@id="pnnext"]')
                 more_results_button.click()
                 time.sleep(random.uniform(2, 4))  # Wait for new results to load
                 links += extract_links(driver)
@@ -51,7 +51,8 @@ def duckduckgo_search(query, result_dict, index, domain):
                 # Remove duplicates
                 links = list(set(links))
 
-            except Exception:
+            except Exception as e:
+                print(f"Error clicking 'Next': {e}")
                 break
 
     except Exception as e:
@@ -65,16 +66,11 @@ def duckduckgo_search(query, result_dict, index, domain):
 
 def extract_links(driver):
     links = []
-    for i in range(0, 30):  # Check for up to 30 elements
-        element_id = f"r1-{i}"
-        try:
-            elements = driver.find_elements(By.XPATH, f'//*[@id="rso"]/div[{element_id}]/div/div/div/div[1]/div/div/span/a/h3')
-            for element in elements:
-                link = element.get_attribute('href')
-                if link:
-                    links.append(link)
-        except Exception:
-            continue
+    elements = driver.find_elements(By.XPATH, '//*[@id="rso"]//a/h3')  # Updated XPath for link extraction
+    for element in elements:
+        link = element.get_attribute('href')
+        if link:
+            links.append(link)
     return links
 
 def filter_and_search_content(links, mpn, domain):
@@ -112,7 +108,8 @@ def filter_and_search_content(links, mpn, domain):
                 if close_matches:
                     best_match = close_matches[0]
 
-        except Exception:
+        except Exception as e:
+            print(f"Error processing link {link}: {e}")
             continue
     
     return [best_match] if best_match else []
