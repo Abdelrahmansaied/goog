@@ -1,5 +1,4 @@
 import pandas as pd
-import openpyxl
 import re
 import time
 import random
@@ -19,7 +18,10 @@ import streamlit as st
 # Setup Chrome options
 chrome_options = Options()
 chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--headless")  # Headless mode for server
 chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
+chrome_options.add_argument("--window-size=1920x1080")  # Set window size
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 chrome_options.add_argument(f"user-agent={user_agent}")
 
@@ -59,7 +61,7 @@ def duckduckgo_search(query, result_dict, index, domain):
 
     # Use lock to safely update the result
     with results_lock:
-        result_dict[index] = (links, filter_and_search_content(links, query, domain))
+        result_dict[index] = filter_and_search_content(links, query, domain)
 
 def extract_links(driver):
     links = []
@@ -81,9 +83,6 @@ def filter_and_search_content(links, mpn, domain):
 
     # Filter links for the specified domain
     filtered_links = [link for link in links if domain in link]
-
-    if not filtered_links:
-        return ["No links found for this domain."]
 
     for link in filtered_links:
         try:
@@ -116,65 +115,56 @@ def filter_and_search_content(links, mpn, domain):
         except Exception as e:
             continue
     
-    return [best_match] if best_match else ["No suitable match found."]
+    return [best_match] if best_match else []
 
 def extract_domain_prefix(manufacturer_name):
     return manufacturer_name.lower() + ".com"  # Adjust as needed
 
 # Streamlit UI
-st.title("MPN Search Application")
+st.title("Google Search Application")
 st.write("Upload an Excel file with columns 'MPN' and 'SE_MAN_NAME'.")
 
 uploaded_file = st.file_uploader("Choose an Excel file", type='xlsx')
 
 if uploaded_file and st.button("Start Search"):
-    df = pd.read_excel(uploaded_file)
+    try:
+        df = pd.read_excel(uploaded_file)
 
-    if 'MPN' not in df.columns or 'SE_MAN_NAME' not in df.columns:
-        st.error("Input file must contain 'MPN' and 'SE_MAN_NAME' columns.")
-    else:
-        df['Online Link'] = ''
-        result_dict = {}
+        if 'MPN' not in df.columns or 'SE_MAN_NAME' not in df.columns:
+            st.error("Input file must contain 'MPN' and 'SE_MAN_NAME' columns.")
+        else:
+            df['Online Link'] = ''
+            result_dict = {}
 
-        threads = []
-        for index, row in df.iterrows():
-            mpn = row['MPN']
-            se_man_name = row['SE_MAN_NAME']
-            
-            search_domain = extract_domain_prefix(se_man_name)
-            search_query = f"{mpn}"
-            thread = threading.Thread(target=duckduckgo_search, args=(search_query, result_dict, index, search_domain))
-            threads.append(thread)
-            thread.start()
-            time.sleep(random.uniform(3, 10))  # Random sleep time
+            threads = []
+            for index, row in df.iterrows():
+                mpn = row['MPN']
+                se_man_name = row['SE_MAN_NAME']
+                
+                search_domain = extract_domain_prefix(se_man_name)
+                search_query = f"{mpn}"
+                thread = threading.Thread(target=duckduckgo_search, args=(search_query, result_dict, index, search_domain))
+                threads.append(thread)
+                thread.start()
+                time.sleep(random.uniform(3, 10))  # Random sleep time
 
-        for thread in threads:
-            thread.join()
+            for thread in threads:
+                thread.join()
 
-        for index, row in df.iterrows():
-            se_man_name = row['SE_MAN_NAME']
-            links, results = result_dict.get(index, ([], []))
-            if links:
-                st.write(f"Links found for {mpn}:")
-                for link in links:
-                    st.write(link)
-            else:
-                st.write(f"No links found for {mpn}.")
+            for index, row in df.iterrows():
+                se_man_name = row['SE_MAN_NAME']
+                results = result_dict.get(index, [])
+                for link in results:
+                    domain_prefix = extract_domain_prefix(se_man_name).lower()
+                    if domain_prefix in link:
+                        df.at[index, 'Online Link'] = link
+                        break
 
-            if results:
-                for result in results:
-                    if isinstance(result, str):
-                        st.write(f"Result for {mpn}: {result}")
+            output_file = 'output_file.xlsx'
+            df.to_excel(output_file, index=False)
 
-            # Update the Online Link column
-            for link in links:
-                domain_prefix = extract_domain_prefix(se_man_name).lower()
-                if domain_prefix in link:
-                    df.at[index, 'Online Link'] = link
-                    break
+            st.success("Process completed! Results saved to `output_file.xlsx`.")
+            st.dataframe(df)
 
-        output_file = r'C:\report\output_file.xlsx'
-        df.to_excel(output_file, index=False)
-
-        st.success("Process completed! Results saved to `output_file.xlsx`.")
-        st.dataframe(df)
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
